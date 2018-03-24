@@ -1,0 +1,102 @@
+---
+title: "Employee Job Satisfaction Survey Analysis"
+author: "Group 1"
+output: html_document
+runtime: shiny
+---
+
+## Introduction
+
+The survey we designed was about the empoyees' job satisfaction rating in ABS company. The nubmer 1 to 5 quesitons were about the satisfaction rating about income&benefits, relationship, resource, learning&growthing oppotunities and work/life balance. The number 6 question asked about the over all job satisfaction level. We plan to use the answer of the number 6 question as our goal (dependent variable) and try to find out how the answers of quistion 1-5 may impact the overall job satisfaction level of empolyees.
+
+Survey Form:
+
+https://goo.gl/forms/ktTaOUXBTaqDYVQz1
+
+Survey Data:
+
+https://docs.google.com/spreadsheets/d/1ird97kCnDg2YT7VAAp78LfSJICuArNLTvYEJd70Ajk8/edit?usp=sharing
+
+```{r setup, include=FALSE}
+# load packages
+library(tidyverse)
+library(magrittr)
+library(DT)
+library(readr)
+survey_result <- readr::read_rds("survey_result.rds")
+```
+
+## Bar charts
+
+Show the distribution of different responses result.
+
+```{r, echo = FALSE}
+selectInput(inputId = 'var', 
+            label = 'Select a Variable', 
+            choices = names(survey_result),
+            selected = names(survey_result)[[1]]
+            )
+```
+
+```{r, echo = FALSE}
+renderPlot({
+    survey_result %>% 
+    ggplot(aes(x = survey_result[[input$var]])) +
+    geom_bar(stat = "count", width = 0.7) +
+    labs(x = input$var)
+})
+```
+
+## Mosaic chart
+
+```{r, echo = FALSE}
+survey_result_long <- survey_result %>% 
+  gather(key = name, value = satisfication)
+
+survey_result_long %>% 
+  ggplot(aes(x = name, fill = satisfication)) +
+  geom_bar(position = "fill") + 
+  coord_flip()
+```
+
+#### Analysis
+
+  - `salary and benefits` seems more related with the `overall satisfication`
+  - `resources` and `relation with manager` seems to have the highest ratings, which means the company provides enough resources to employees to perform their jobs.
+
+## Correlation table
+
+```{r, echo = FALSE}
+cor_table <- survey_result %>% 
+  na.omit() %>% 
+  map_dfc(as.double) %>% 
+  stats::cor() 
+
+cor_table[] %<>% 
+  map_dbl(round, digits = 3)
+
+DT::datatable(cor_table)
+```
+
+#### Analysis:
+
+  - `salary and benefits` are the highly correlated with the `overall satisfication` as compared with other variables.
+  - `Learning and growth opportunities` also affect employee's `overall satisfication`.
+  - However, work life balance is not highly correlated with `overall satisfication`, this means that the company can improve the `work life balance` of employees
+  
+
+## Linear Regression
+
+```{r}
+formula <- overall ~ salary_and_benefits + relation_with_manager + resources + opportunties + work_life_balance
+
+lm_fit <- lm(formula = formula, data = survey_result %>% map_dfc(as.double))
+
+summary(lm_fit)
+```
+
+#### Analysis
+
+  - `salary and benefits` and `resources` are significant
+  - R-square is high
+  - dataset is probably a little small
